@@ -1,0 +1,77 @@
+import cv2
+import face_recognition
+import os
+import numpy as np
+
+#this prints the images names in a list
+path="D:\IMAGES FOR PROJECT"
+images=[]
+Names=[]
+mylist=os.listdir(path)   ###### take images with names
+print("The images in the folder with name are\n: ",mylist)
+for cls in mylist:
+    currentImage=cv2.imread(f'{path}/{cls}')
+    images.append((currentImage))
+    Names.append(os.path.splitext(cls)[0]) #this removes .jpg from the text   #####[0] it is like grabbing first element i:e bill gates without jpg
+print(Names)
+
+#function that computes all the encodings
+def findencodings(images):
+    encodelist=[]
+    for img in images:
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        encode = face_recognition.face_encodings(img)[0]
+        encodelist.append(encode)
+    return encodelist
+
+encodelistknownfaces=findencodings(images)
+print(len(encodelistknownfaces))
+
+#initialising webcam
+cap  = cv2.VideoCapture(0)
+cv2.namedWindow("Window")
+
+while True:
+    success,img=cap.read()
+    smallimage=cv2.resize(img,(0,0),None,0.25,0.25) ######image resized to speed the process    #####0.25 is actually 1/4th of actual image size
+    smallimage = cv2.cvtColor(smallimage, cv2.COLOR_BGR2RGB)
+    faceloc_in_current_frame = face_recognition.face_locations(smallimage)
+    encode_in_current_frame = face_recognition.face_encodings(smallimage,faceloc_in_current_frame)
+
+     ######matching faces we get from current frame
+    for encodeFace,faceloc in zip(encode_in_current_frame,faceloc_in_current_frame):  ####this will grab faces one by one in current frame and then grab encoding from current frame
+         matches=face_recognition.compare_faces(encodelistknownfaces,encodeFace)
+         faceDis=face_recognition.face_distance(encodelistknownfaces,encodeFace) ####minimum the face distance more the accuracy
+         print(faceDis)
+         matchindex=np.argmin(faceDis)
+
+         if matches[matchindex]:
+             name=Names[matchindex].upper()
+             print(name)
+             y1,x2,y2,x1=faceloc
+             y1, x2, y2, x1=y1*4,x2*4,y2*4,x1*4
+             #draw rectangle
+             cv2.rectangle(img,(x1,y1),(x2,y2),(255,0,255),2)
+             cv2.rectangle(img, (x1,y2-35),(x2,y2), (255,0,255), cv2.FILLED)
+             cv2.putText(img,name, (x1+10,y2-3), cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,255),2)  #####here 1 is font and white colour
+
+
+    cv2.imshow('webcam',img)
+    cv2.waitKey(1)
+    if cv2.waitKey(20) & 0xFF == ord('q'):
+        break
+
+cv2.destroyAllWindows()
+cap.release()
+
+# faceloc=face_recognition.face_locations(imgelon)[0]
+# encodeelon=face_recognition.face_encodings(imgelon)[0]
+# cv2.rectangle(imgelon,(faceloc[3],faceloc[0],faceloc[1],faceloc[2]),(255,0,255),2) #isse purple ka dabba aa jaayega
+#
+# faceloctest=face_recognition.face_locations(imgelon_test)[0]
+# encodeelontest=face_recognition.face_encodings(imgelon_test)[0]
+# cv2.rectangle(imgelon_test,(faceloctest[3],faceloctest[0],faceloctest[1],faceloctest[2]),(255,0,255),2) #isse purple ka dabba aa jaayega
+#
+# #COMPARING THESE TWO FACES(WE USED LINEAR SVM)
+# result=face_recognition.compare_faces([encodeelon],encodeelontest)
+# print(result)
